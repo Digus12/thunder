@@ -13,6 +13,11 @@
 #include "resources/rendertexture.h"
 
 #include "analytics/profiler.h"
+
+#include "postprocess/ambientocclusion.h"
+#include "postprocess/antialiasing.h"
+#include "postprocess/bloom.h"
+
 #include "log.h"
 
 #include "commandbuffer.h"
@@ -80,11 +85,10 @@ Pipeline::Pipeline() :
     m_Targets[G_EMISSIVE]   = emissive;
     m_Buffer->setGlobalTexture(G_EMISSIVE,  emissive);
 
-  //m_pBlur     = new ABlurGL();
-  //m_pAO       = new AAmbientOcclusionGL();
+  //m_OpaqEffects(new AmbientOcclusion());
 
-  //m_PostEffects.push_back(new AAntiAliasingGL());
-  //m_PostEffects.push_back(new ABloomGL());
+  //m_PostEffects.push_back(new AntiAliasing());
+  //m_PostEffects.push_back(new Bloom());
 }
 
 Pipeline::~Pipeline() {
@@ -116,8 +120,8 @@ void Pipeline::draw(Scene *scene, Camera &camera) {
     drawComponents(ICommandBuffer::DEFAULT, filter);
 
     /// \todo Screen Space Ambient Occlusion effect should be defined here
-    m_Buffer->setRenderTarget({m_Targets[G_EMISSIVE]}, m_Targets[DEPTH_MAP]);
 
+    m_Buffer->setRenderTarget({m_Targets[G_EMISSIVE]}, m_Targets[DEPTH_MAP]);
     // Step2 - Light pass
     drawComponents(ICommandBuffer::LIGHT, filter);
 
@@ -125,11 +129,13 @@ void Pipeline::draw(Scene *scene, Camera &camera) {
     // Step3 - Draw Transparent pass
     drawComponents(ICommandBuffer::TRANSLUCENT, filter);
 
-    m_Buffer->setRenderTarget(m_Target);
     m_Buffer->setScreenProjection();
+    RenderTexture *post = postProcess(m_Targets[G_EMISSIVE]);
+
+    m_Buffer->setRenderTarget(m_Target);
     m_Buffer->clearRenderTarget(true, Vector4());
 
-    m_pSprite->setTexture(OVERRIDE, postProcess(*m_Targets[G_EMISSIVE]));
+    m_pSprite->setTexture(OVERRIDE, post);
     m_Buffer->drawMesh(Matrix4(), m_pPlane, ICommandBuffer::UI, m_pSprite);
 }
 
@@ -167,9 +173,9 @@ void Pipeline::resize(uint32_t width, uint32_t height) {
     for(auto &it : m_Targets) {
         it.second->resize(width, height);
     }
-    //for(auto &it : m_PostEffects) {
-    //    //it->resize(width, height);
-    //}
+    for(auto &it : m_PostEffects) {
+        it->resize(width, height);
+    }
 }
 
 void Pipeline::combineComponents(Object *object, bool first) {
@@ -286,11 +292,11 @@ void Pipeline::directUpdate(Camera &camera, DirectLight *light) {
     }
 }
 
-RenderTexture *Pipeline::postProcess(RenderTexture &source) {
-    RenderTexture *result   = &source;
-    //for(auto it : m_PostEffects) {
-    //    result  = it->draw(*result, *m_Buffer);
-    //}
+RenderTexture *Pipeline::postProcess(RenderTexture *source) {
+    RenderTexture *result  = source;
+    for(auto it : m_PostEffects) {
+        result = it->draw(result, *m_Buffer);
+    }
     return result;
 }
 

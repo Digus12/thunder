@@ -15,6 +15,8 @@
 
 #include "settingsmanager.h"
 
+#include "objectctrl.h"
+
 #include <QVariant>
 #include <QColor>
 
@@ -75,6 +77,10 @@ void ObjectCtrlPipeline::loadSettings() {
     m_SecondaryGridColor = m_PrimaryGridColor = Vector4(color.redF(), color.greenF(), color.blueF(), color.alphaF());
 }
 
+void ObjectCtrlPipeline::setController(ObjectCtrl *ctrl) {
+    m_pController = ctrl;
+}
+
 void ObjectCtrlPipeline::draw(Scene *scene, Camera &camera) {
     // Retrive object id
     m_Buffer->setRenderTarget({m_Targets[SELECT_MAP]}, m_Targets[DEPTH_MAP]);
@@ -120,11 +126,13 @@ void ObjectCtrlPipeline::draw(Scene *scene, Camera &camera) {
 
     drawGrid(camera);
 
-    m_Buffer->setRenderTarget(m_Target);
     m_Buffer->setScreenProjection();
+    RenderTexture *post = postProcess(m_Targets[G_EMISSIVE]);
+
+    m_Buffer->setRenderTarget(m_Target);
     m_Buffer->clearRenderTarget(true, camera.color(), false);
 
-    m_pSprite->setTexture(OVERRIDE, postProcess(*m_Targets[G_EMISSIVE]));
+    m_pSprite->setTexture(OVERRIDE, post);
     m_Buffer->drawMesh(Matrix4(), m_pPlane, ICommandBuffer::UI, m_pSprite);
 }
 

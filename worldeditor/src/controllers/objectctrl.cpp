@@ -97,6 +97,7 @@ void ObjectCtrl::init(Scene *scene) {
     CameraCtrl::init(scene);
 
     m_pPipeline = new ObjectCtrlPipeline;
+    m_pPipeline->setController(this);
     m_pActiveCamera->setPipeline(m_pPipeline);
 
     Handles::init();

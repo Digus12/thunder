@@ -50,7 +50,7 @@ protected:
 
     void                        directUpdate        (Camera &camera, DirectLight *light);
 
-    RenderTexture              *postProcess         (RenderTexture &source);
+    RenderTexture              *postProcess         (RenderTexture *source);
 
     ObjectList                  frustumCulling      (ObjectList &in, const array<Vector3, 8> &frustum);
 
@@ -67,6 +67,7 @@ protected:
 
     Vector2                     m_Screen;
 
+    list<PostProcessor *>       m_OpaqEffects;
     list<PostProcessor *>       m_PostEffects;
 
     Mesh                       *m_pPlane;
